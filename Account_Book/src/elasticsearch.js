@@ -1,13 +1,18 @@
-//'use strict';
+//Hostname/port config
+const hostname = 'localhost';
+const port = 9200;
+//********************
 
 var elasticsearch = require('@elastic/elasticsearch');
 
 var client = new elasticsearch.Client({
-	node: 'http://localhost:9200'
+	node: 'http://' + hostname + ':' + port
 });
 
 var indexName = "contacts";
-//Delete an existing index
+var idCount = 0;
+
+//Delete the existing index
 function deleteIndex() {
 	return client.indices.delete({
 		index: indexName
@@ -15,7 +20,7 @@ function deleteIndex() {
 }
 exports.deleteIndex = deleteIndex;
 
-//Create a new index
+//Create new index
 function initIndex() {
 	return client.indices.create({
 		index: indexName
@@ -37,13 +42,13 @@ function indexExists() {
 }
 exports.indexExists = indexExists;
 
+//Set the properties of data
 function initMapping() {
 	return client.indices.putMapping({
 		index: indexName,
-		type: "Contact",
 		body: {
 			properties: {
-				id: { type: "integer" },
+				UID: { type: "string" },
 				first_name: { type: "string" },
 				last_name: { type: "string" },
 				phone_number: { type: "integer" },
@@ -56,12 +61,13 @@ function initMapping() {
 }
 exports.initMapping = initMapping;
 
+//Add a contact
 function addContact(contact) {
+	console.log('adding contact')
 	return client.index({
 		index: indexName,
-		type: "Contact",
 		body: {
-			id: contact.id,
+			UID: contact.UID.
 			first_name: contact.first_name,
 			last_name: contact.last_name,
 			phone_number: contact.phone_number,
@@ -69,17 +75,54 @@ function addContact(contact) {
 			city: contact.city,
 			state: contact.state
 		}
+	},  function(err, resp, status) {
+     	if (err) {
+        	console.log(err);
+     	} else {
+     		idCount += 1;
+        	console.log("added", resp);
+     	}
 	});
 }
 exports.addContact = addContact;
 
+//Delete a contact
 function deleteContact(contact) {
 
 }
 exports.deleteContact = deleteContact;
 
+//Returns all contacts
 function getAllContacts() {
-	return client.indices.search({
+	return client.search({
 		index: indexName
 	});
 }
+exports.getAllContacts = getAllContacts;
+
+//Return contact by unique id
+function getContactById(id) {
+	return client.search({
+		index: indexName,
+		id: id,
+		_source: "true"
+	});
+}
+exports.getContactById = getContactById;
+
+//Populated testing data
+function testItems() {
+	return client.index({
+		index: indexName,
+		body: {
+			UID: 'mhudson2',
+			first_name: 'Michael',
+			last_name: 'Hudson',
+			phone_number: 1234567890,
+			home_address: '4 Giles CT',
+			city: 'Stafford',
+			state: 'Virginia'
+		}
+	});
+}
+exports.testItems = testItems;
