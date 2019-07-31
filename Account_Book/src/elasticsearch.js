@@ -1,4 +1,4 @@
-//Hostname/port config
+//Hostname/port config for elasticsearch
 const hostname = 'localhost';
 const port = 9200;
 //********************
@@ -23,7 +23,20 @@ exports.deleteIndex = deleteIndex;
 //Create new index
 function initIndex() {
 	return client.indices.create({
-		index: indexName
+		index: indexName,
+		body: {
+			mappings: {
+				properties: {
+					UID: { type: "text" },
+					first_name: { type: "text" },
+					last_name: { type: "text" },
+					phone_number: { type: "integer" },
+					home_address: { type: "text" },
+					city: { type: "text" },
+					state: { type: "text" }
+				}
+			}
+		}
 	},  function(err, resp, status) {
      	if (err) {
         	console.log(err);
@@ -42,32 +55,13 @@ function indexExists() {
 }
 exports.indexExists = indexExists;
 
-//Set the properties of data
-function initMapping() {
-	return client.indices.putMapping({
-		index: indexName,
-		body: {
-			properties: {
-				UID: { type: "string" },
-				first_name: { type: "string" },
-				last_name: { type: "string" },
-				phone_number: { type: "integer" },
-				home_address: { type: "string" },
-				city: { type: "string" },
-				state: { type: "string" }
-			}
-		}
-	});
-}
-exports.initMapping = initMapping;
-
 //Add a contact
 function addContact(contact) {
 	console.log('adding contact')
 	return client.index({
 		index: indexName,
 		body: {
-			UID: contact.UID.
+			UID: contact.UID,
 			first_name: contact.first_name,
 			last_name: contact.last_name,
 			phone_number: contact.phone_number,
@@ -79,7 +73,6 @@ function addContact(contact) {
      	if (err) {
         	console.log(err);
      	} else {
-     		idCount += 1;
         	console.log("added", resp);
      	}
 	});
@@ -87,15 +80,51 @@ function addContact(contact) {
 exports.addContact = addContact;
 
 //Delete a contact
-function deleteContact(contact) {
-
+function deleteContact(UID) {
+	return client.deleteByQuery({
+		index: indexName,
+		body: { 
+			query: {
+         		match: { UID: UID }
+        	}
+    	}
+	},  function(err, resp) {
+     	if (err) {
+        	console.log(err);
+     	} else {
+        	console.log("Contact '" + UID + "' removed", resp);
+     	}
+	});
 }
 exports.deleteContact = deleteContact;
 
+//Update a contact
+function updateContact(contact) {
+	return client.updateByQuery({
+		index: indexName,
+	})
+}
+exports.updateContact = updateContact;
+
 //Returns all contacts
-function getAllContacts() {
+function getAllContacts(info) {
+	var page = 0;
+	var pageSize = 10;
+	var query = "UID:*";
+	if(typeof(info.page) !== 'undefined') {
+		page = info.page;
+	}
+	if(typeof(info.pageSize) !== 'undefined') {
+		pageSize = info.pageSize;
+	}
+	if(typeof(info.query) !== 'undefined') {
+		query = info.query;
+	}
 	return client.search({
-		index: indexName
+		index: indexName,
+		from: page,
+		size: pageSize,
+		q: query
 	});
 }
 exports.getAllContacts = getAllContacts;
@@ -104,18 +133,22 @@ exports.getAllContacts = getAllContacts;
 function getContactById(id) {
 	return client.search({
 		index: indexName,
-		id: id,
-		_source: "true"
+		body: { 
+			query: {
+         		match: { UID: id }
+        	}
+    	}
 	});
 }
 exports.getContactById = getContactById;
 
 //Populated testing data
 function testItems() {
+	idCount += 1;
 	return client.index({
 		index: indexName,
 		body: {
-			UID: 'mhudson2',
+			UID: String(idCount),
 			first_name: 'Michael',
 			last_name: 'Hudson',
 			phone_number: 1234567890,

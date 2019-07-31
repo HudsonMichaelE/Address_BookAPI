@@ -33,5 +33,5 @@ elastic.indexExists()
 
 //run app
 app.listen(port, app, () => {
-	console.log("Server Started.")
+	console.log("Server Starting...")
 })
